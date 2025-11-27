@@ -5,6 +5,7 @@ import swapRoutes from './routes/swapRoutes';
 import tokenRoutes from './routes/tokenRoutes';
 import chainRoutes from './routes/chainRoutes';
 import agentRoutes from './routes/agentRoutes';
+import { adminController } from './controllers/adminController';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,7 @@ app.use('/api/swap', swapRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/chains', chainRoutes);
 app.use('/api/agent', agentRoutes);
+app.use('/api/admin', adminController);
 
 app.get('/health', (req, res) => {
     res.send('OK');
