@@ -23,4 +23,8 @@ export class SwapService {
     async submitOrder(params: OrderParams) {
         return this.adapter.submitOrder(params);
     }
+
+    async getOrderStatus(orderUid: string) {
+        return this.adapter.getOrderStatus(orderUid);
+    }
 }

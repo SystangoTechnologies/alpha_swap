@@ -8,6 +8,7 @@ import { useTokenApproval } from '../hooks/useTokenApproval';
 import { WethService } from '../services/wethService';
 import { ethers } from 'ethers';
 import './ChatPage.css';
+import { swapApi } from '../api/swapApi';
 
 interface ChatPageProps {
     selectedChainId: number;
@@ -22,6 +23,8 @@ export function ChatPage({ selectedChainId }: ChatPageProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [refreshingQuoteId, setRefreshingQuoteId] = useState<string | null>(null);
     const [isApproving, setIsApproving] = useState(false);
+    const [submittedOrderId, setSubmittedOrderId] = useState<string | null>(null);
+    const [_orderStatus, setOrderStatus] = useState<string | null>(null);
     const cowSdk = useCowSdk();
 
     const scrollToBottom = () => {
@@ -162,10 +165,14 @@ export function ChatPage({ selectedChainId }: ChatPageProps) {
                         // Allowance is sufficient, proceed with order
                         const orderId = await cowSdk.placeOrder(quote);
 
-                        // Add success message
+                        // Set order ID to start polling
+                        setSubmittedOrderId(orderId);
+                        setOrderStatus('open');
+
+                        // Add success message with initial status
                         const successMessage: Message = {
                             role: 'assistant',
-                            content: `Order submitted successfully! 🚀\n\nOrder ID: ${orderId}\n\nYou can view it on the CoW Explorer.`,
+                            content: `⏳ Order submitted!\n\nOrder ID: ${orderId}\n\nStatus: Processing...\n\nYou can view it on the CoW Explorer.`,
                         };
                         setMessages(prev => [...prev, successMessage]);
                     } catch (error: any) {
@@ -209,6 +216,73 @@ export function ChatPage({ selectedChainId }: ChatPageProps) {
             setIsLoading(false);
         }
     };
+
+    // Poll order status
+    useEffect(() => {
+        if (!submittedOrderId || !selectedChainId) return;
+
+        const pollStatus = async () => {
+            try {
+                const status = await swapApi.getOrderStatus(submittedOrderId, selectedChainId);
+                setOrderStatus(status.status);
+
+                // Update the last message with current status
+                setMessages(prev => {
+                    const newMessages = [...prev];
+                    const lastMsg = newMessages[newMessages.length - 1];
+
+                    if (lastMsg && lastMsg.content.includes(submittedOrderId)) {
+                        let statusEmoji = '⏳';
+                        let statusText = 'Processing...';
+
+                        if (status.status === 'fulfilled') {
+                            statusEmoji = '✅';
+                            statusText = 'Filled!';
+                        } else if (status.status === 'cancelled') {
+                            statusEmoji = '❌';
+                            statusText = 'Cancelled';
+                        } else if (status.status === 'expired') {
+                            statusEmoji = '⚠️';
+                            statusText = 'Expired';
+                        }
+
+                        newMessages[newMessages.length - 1] = {
+                            ...lastMsg,
+                            content: `${statusEmoji} Order ${status.status === 'fulfilled' ? 'Filled!' : statusText}\n\nOrder ID: ${submittedOrderId}\n\nStatus: ${status.status.charAt(0).toUpperCase() + status.status.slice(1)}\n\nYou can view it on the CoW Explorer.`,
+                        };
+                    }
+
+                    return newMessages;
+                });
+
+                // Stop polling and reset if order is fulfilled, cancelled, or expired
+                if (['fulfilled', 'cancelled', 'expired'].includes(status.status)) {
+                    return true; // Stop polling
+                }
+            } catch (error) {
+                console.error('Error polling order status:', error);
+            }
+            return false; // Continue polling
+        };
+
+        // Initial check
+        pollStatus();
+
+        const interval = setInterval(async () => {
+            const shouldStop = await pollStatus();
+            if (shouldStop) {
+                clearInterval(interval);
+                // Reset after showing final status for 3 seconds
+                setTimeout(() => {
+                    setSubmittedOrderId(null);
+                    setOrderStatus(null);
+                }, 3000);
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [submittedOrderId, selectedChainId]);
+
 
     const handleAcceptQuote = () => {
         // For now, just send a confirmation message

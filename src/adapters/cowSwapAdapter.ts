@@ -109,4 +109,14 @@ export class CowSwapAdapter implements ISwapAdapter {
 
         return orderUid;
     }
+
+    async getOrderStatus(orderUid: string): Promise<any> {
+        try {
+            const order = await this.orderBookApi.getOrder(orderUid);
+            return order;
+        } catch (error) {
+            console.error('Error fetching order status:', error);
+            throw error;
+        }
+    }
 }

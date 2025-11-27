@@ -17,7 +17,7 @@ export const swapApi = {
     },
 
     submitOrder: async (params: any) => {
-        const response = await fetch(`${API_URL}/order`, {
+        const response = await fetch(`${API_URL}/orders`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -27,6 +27,15 @@ export const swapApi = {
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to submit order');
+        }
+        return response.json();
+    },
+
+    getOrderStatus: async (orderUid: string, chainId: number) => {
+        const response = await fetch(`${API_URL}/orders/${orderUid}?chainId=${chainId}`);
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to get order status');
         }
         return response.json();
     },

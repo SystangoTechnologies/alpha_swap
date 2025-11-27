@@ -6,6 +6,7 @@ import { ethers } from 'ethers';
 import { ApprovalButton } from './ApprovalButton';
 import { useTokenApproval } from '../hooks/useTokenApproval';
 import { WethService } from '../services/wethService';
+import { swapApi } from '../api/swapApi';
 
 interface OrderFormProps {
     cowSdk: ReturnType<typeof useCowSdk>;
@@ -32,6 +33,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ cowSdk, selectedChainId, o
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [orderId, setOrderId] = useState<string | null>(null);
+    const [orderStatus, setOrderStatus] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState<'sell' | 'buy'>('sell');
     const [wrapTxHash, setWrapTxHash] = useState<string | null>(null);
@@ -152,7 +154,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ cowSdk, selectedChainId, o
 
         if (!isRefresh) {
             setLoading(true);
-            setOrderId(null);
         } else {
             setRefreshing(true);
         }
@@ -190,19 +191,67 @@ export const OrderForm: React.FC<OrderFormProps> = ({ cowSdk, selectedChainId, o
 
     // Auto-fetch quote when dependencies change
     useEffect(() => {
+        // Don't fetch quote if order is in progress
+        if (orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)) {
+            return;
+        }
         fetchQuote();
-    }, [sdk, sellToken, buyToken, debouncedAmount]);
+    }, [sdk, sellToken, buyToken, debouncedAmount, orderId, orderStatus]);
 
     // Auto-refresh quote every 20 seconds
     useEffect(() => {
         if (!quote) return;
+
+        // Don't refresh quote if order is in progress
+        if (orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)) {
+            return;
+        }
 
         const interval = setInterval(() => {
             fetchQuote(true);
         }, 20000);
 
         return () => clearInterval(interval);
-    }, [quote, sdk, sellToken, buyToken, debouncedAmount]);
+    }, [quote, sdk, sellToken, buyToken, debouncedAmount, orderId, orderStatus]);
+
+    // Poll order status
+    useEffect(() => {
+        if (!orderId || !selectedChainId) return;
+
+        const pollStatus = async () => {
+            try {
+                const status = await swapApi.getOrderStatus(orderId, selectedChainId);
+                setOrderStatus(status.status);
+
+                // Stop polling and reset if order is fulfilled, cancelled, or expired
+                if (['fulfilled', 'cancelled', 'expired'].includes(status.status)) {
+                    // Wait 3 seconds to show the final status, then reset
+                    setTimeout(() => {
+                        setOrderId(null);
+                        setOrderStatus(null);
+                        setQuote(null);
+                        setAmount('');
+                    }, 3000);
+                    return true; // Stop polling
+                }
+            } catch (error) {
+                console.error('Error polling order status:', error);
+            }
+            return false; // Continue polling
+        };
+
+        // Initial check
+        pollStatus();
+
+        const interval = setInterval(async () => {
+            const shouldStop = await pollStatus();
+            if (shouldStop) {
+                clearInterval(interval);
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [orderId, selectedChainId]);
 
     // Preserve tokens when network changes
     useEffect(() => {
@@ -540,11 +589,13 @@ export const OrderForm: React.FC<OrderFormProps> = ({ cowSdk, selectedChainId, o
 
                                     <button
                                         onClick={handlePlaceOrder}
-                                        disabled={loading || !quote || !sdk || !isApproved}
+                                        disabled={loading || !quote || !sdk || !isApproved || !!(orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus))}
                                         className="btn-primary"
-                                        title={!isApproved ? "Please approve token first" : ""}
+                                        title={!isApproved ? "Please approve token first" : (orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)) ? "Order in progress..." : ""}
                                     >
-                                        {loading ? (quote ? 'Swapping...' : 'Fetching Quote...') : (quote ? 'Swap' : 'Enter Amount')}
+                                        {orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)
+                                            ? 'Order Processing...'
+                                            : loading ? (quote ? 'Swapping...' : 'Fetching Quote...') : (quote ? 'Swap' : 'Enter Amount')}
                                     </button>
                                 </>
                             );
@@ -567,7 +618,15 @@ export const OrderForm: React.FC<OrderFormProps> = ({ cowSdk, selectedChainId, o
 
                     {orderId && (
                         <div className="success-message">
-                            Order Placed Successfully! <br />
+                            <div style={{ marginBottom: '8px' }}>
+                                {orderStatus === 'fulfilled' ? '✅ Order Filled!' :
+                                    orderStatus === 'cancelled' ? '❌ Order Cancelled' :
+                                        orderStatus === 'expired' ? '⚠️ Order Expired' :
+                                            '⏳ Processing Order...'}
+                            </div>
+                            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '4px' }}>
+                                Status: <span style={{ textTransform: 'capitalize' }}>{orderStatus || 'Pending'}</span>
+                            </div>
                             <a
                                 href={`${import.meta.env.VITE_COW_EXPLORER_URL || 'https://explorer.cow.fi/sepolia/orders/'}${orderId}`}
                                 target="_blank"

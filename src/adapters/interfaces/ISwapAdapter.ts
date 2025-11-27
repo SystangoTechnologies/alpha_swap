@@ -21,4 +21,5 @@ export interface OrderParams {
 export interface ISwapAdapter {
     getQuote(params: QuoteParams): Promise<any>;
     submitOrder(params: OrderParams): Promise<string>; // Returns order ID
+    getOrderStatus(orderUid: string): Promise<any>;
 }
