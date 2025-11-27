@@ -1,0 +1,37 @@
+[
+    {
+        "id": 1,
+        "name": "Ethereum",
+        "rpcUrl": "${rpcUrls.ETHEREUM}",
+        "icon": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+        "supportedChainId": 1
+    },
+    {
+        "id": 100,
+        "name": "Gnosis",
+        "rpcUrl": "${rpcUrls.GNOSIS}",
+        "icon": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png",
+        "supportedChainId": 100
+    },
+    {
+        "id": 42161,
+        "name": "Arbitrum",
+        "rpcUrl": "${rpcUrls.ARBITRUM}",
+        "icon": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png",
+        "supportedChainId": 42161
+    },
+    {
+        "id": 8453,
+        "name": "Base",
+        "rpcUrl": "${rpcUrls.BASE}",
+        "icon": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png",
+        "supportedChainId": 8453
+    },
+    {
+        "id": 11155111,
+        "name": "Sepolia",
+        "rpcUrl": "${rpcUrls.SEPOLIA}",
+        "icon": "https://raw.githubusercontent.com/cowprotocol/cow-sdk/refs/heads/main/packages/config/src/chains/images/sepolia-logo.svg",
+        "supportedChainId": 11155111
+    }
+]

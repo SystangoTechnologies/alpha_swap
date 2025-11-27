@@ -1,27 +1,24 @@
 import dotenv from 'dotenv';
 import { Wallet, JsonRpcProvider } from 'ethers';
+import { CONFIG as JSON_CONFIG } from './config/loadConfig';
 
 dotenv.config();
 
 export const CONFIG = {
     PORT: process.env.PORT || 3000,
-    RPC_URLS: {
-        ETHEREUM: process.env.RPC_URL_ETHEREUM || 'https://eth.llamarpc.com',
-        SEPOLIA: process.env.RPC_URL_SEPOLIA || 'https://eth-sepolia.public.blastapi.io',
-        GNOSIS: process.env.RPC_URL_GNOSIS || 'https://rpc.gnosischain.com',
-        ARBITRUM: process.env.RPC_URL_ARBITRUM || 'https://arb1.arbitrum.io/rpc',
-        BASE: process.env.RPC_URL_BASE || 'https://mainnet.base.org',
-    },
+    // RPC URLs are loaded from config.json, env vars can override
+    RPC_URLS: JSON_CONFIG.rpcUrls,
     GEMINI: {
         API_KEY: process.env.GEMINI_API_KEY,
         MODEL: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
     },
     COW_SWAP: {
-        TOKEN_LIST_URL: process.env.COW_SWAP_TOKEN_LIST_URL || 'https://files.cow.fi/tokens/CowSwap.json',
+        // Token list URL from config.json, env var can override
+        TOKEN_LIST_URL: process.env.COW_SWAP_TOKEN_LIST_URL || JSON_CONFIG.tokenListUrl,
     },
     PRIVATE_KEY: process.env.PRIVATE_KEY,
     // Fallback or default RPC URL if needed for general purposes
-    DEFAULT_RPC_URL: process.env.RPC_URL || process.env.RPC_URL_SEPOLIA, 
+    DEFAULT_RPC_URL: process.env.RPC_URL || process.env.RPC_URL_SEPOLIA,
 };
 
 if (!CONFIG.PRIVATE_KEY) {

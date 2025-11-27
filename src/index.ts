@@ -1,5 +1,6 @@
 import { CowBot } from './cowSdk';
 import { SupportedChainId } from '@cowprotocol/cow-sdk';
+import { CONFIG } from './config';
 
 const args = process.argv.slice(2);
 const networkArgIndex = args.indexOf('--network');
@@ -10,7 +11,7 @@ if (networkArgIndex !== -1) {
     const network = args[networkArgIndex + 1];
     if (network === 'sepolia') {
         chainId = SupportedChainId.SEPOLIA;
-        rpcUrl = 'https://rpc.ankr.com/eth_sepolia';
+        rpcUrl = CONFIG.RPC_URLS.SEPOLIA;
     }
     // Remove network args so they don't interfere with command parsing
     args.splice(networkArgIndex, 2);

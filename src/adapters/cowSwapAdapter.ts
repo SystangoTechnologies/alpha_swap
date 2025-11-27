@@ -1,4 +1,5 @@
 import { ISwapAdapter, QuoteParams, OrderParams } from './interfaces/ISwapAdapter';
+import { CONFIG } from '../config';
 import { TradingSdk, SupportedChainId, OrderKind, OrderBookApi } from '@cowprotocol/cow-sdk';
 import { ethers } from 'ethers';
 
@@ -14,9 +15,10 @@ export class CowSwapAdapter implements ISwapAdapter {
         this.chainId = chainId;
 
         // Initialize Provider
+        // Initialize Provider
         const rpcUrl = chainId === SupportedChainId.SEPOLIA
-            ? 'https://rpc.ankr.com/eth_sepolia'
-            : 'https://rpc.ankr.com/eth'; // Default to Mainnet public RPC
+            ? CONFIG.RPC_URLS.SEPOLIA
+            : CONFIG.RPC_URLS.ETHEREUM; // Default to Mainnet public RPC
 
         const provider = new ethers.JsonRpcProvider(rpcUrl);
         const signer = ethers.Wallet.createRandom(provider);

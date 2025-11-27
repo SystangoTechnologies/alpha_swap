@@ -205,8 +205,8 @@ export const sendMessage = async (req: Request, res: Response) => {
                     const network = action.network || 'sepolia';
                     const chainId = network === 'sepolia' ? 11155111 : 1;
                     const rpcUrl = chainId === 11155111
-                        ? (process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com')
-                        : (process.env.ETHEREUM_RPC_URL || 'https://ethereum-rpc.publicnode.com');
+                        ? CONFIG.RPC_URLS.SEPOLIA
+                        : CONFIG.RPC_URLS.ETHEREUM;
 
                     // Create provider
                     const provider = new ethers.JsonRpcProvider(rpcUrl);

@@ -1,0 +1,10 @@
+{
+    "rpcUrls": {
+        "ETHEREUM": "https://eth.llamarpc.com",
+        "SEPOLIA": "https://ethereum-sepolia-rpc.publicnode.com",
+        "GNOSIS": "https://rpc.gnosischain.com",
+        "ARBITRUM": "https://arb1.arbitrum.io/rpc",
+        "BASE": "https://mainnet.base.org"
+    },
+    "tokenListUrl": "https://files.cow.fi/tokens/CowSwap.json"
+}
