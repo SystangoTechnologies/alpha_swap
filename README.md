@@ -2,7 +2,7 @@
 
 > A next-generation decentralized exchange aggregator with AI-powered natural language trading
 
-AlphaSwap is a modern DEX aggregator that combines the power of CoW Protocol's MEV protection with an intelligent AI agent for seamless token swaps. Built with TypeScript, React, and Google's Gemini AI, it offers both traditional swap interfaces and conversational trading experiences.
+Alpha Swap is a modern DEX aggregator that combines the power of CoW Protocol's MEV protection with an intelligent AI agent for seamless token swaps. Built with TypeScript, React, and Google's Gemini AI, it offers both traditional swap interfaces and conversational trading experiences.
 
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
