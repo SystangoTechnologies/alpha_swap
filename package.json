@@ -1,0 +1,38 @@
+{
+  "name": "alpha_swap",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:server": "ts-node src/server.ts",
+    "start:web": "cd web && npm run dev",
+    "start": "concurrently \"npm run start:server\" \"npm run start:web\"",
+    "clean": "rm -rf dist && cd web && rm -rf dist",
+    "build:server": "tsc",
+    "build:web": "cd web && npm run build",
+    "build": "npm run build:server && npm run build:web",
+    "kill": "pkill -f 'ts-node' || true && pkill -f 'vite' || true && lsof -ti :3000,:5173,:5174,:5175,:5176 2>/dev/null | xargs kill -9 2>/dev/null || true",
+    "restart": "npm run kill && npm run clean && npm run build && npm run start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@cowprotocol/cow-sdk": "^7.1.1",
+    "@cowprotocol/sdk-ethers-v6-adapter": "^0.2.0",
+    "@google/generative-ai": "^0.24.1",
+    "@types/node": "^24.10.1",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0",
+    "express": "^5.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5"
+  }
+}
