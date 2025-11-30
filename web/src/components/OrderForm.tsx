@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCowSdk } from '../hooks/useCowSdk';
 import { type Token } from '../constants/tokens';
 import { TokenSelectorModal } from './TokenSelectorModal';
+import { LimitOrder } from './LimitOrder';
 import { ethers } from 'ethers';
 import { ApprovalButton } from './ApprovalButton';
 import { useTokenApproval } from '../hooks/useTokenApproval';
@@ -37,6 +38,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ cowSdk, selectedChainId, o
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState<'sell' | 'buy'>('sell');
     const [wrapTxHash, setWrapTxHash] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'swap' | 'limit'>('swap');
 
     const [isApproved, setIsApproved] = useState(false);
     const [sellBalance, setSellBalance] = useState<string>('0');
@@ -406,236 +408,280 @@ export const OrderForm: React.FC<OrderFormProps> = ({ cowSdk, selectedChainId, o
                 />
             ) : (
                 <>
-                    <div className="order-form-header">
-                        <h3 style={{ margin: 0, fontWeight: 500 }}>Swap</h3>
-                        <div className="settings-icon" style={{ cursor: 'pointer', opacity: 0.7 }}>⚙️</div>
+                    <div className="tabs-header" style={{ display: 'flex', gap: '16px', marginBottom: '20px', borderBottom: '1px solid var(--color-border)', paddingBottom: '12px' }}>
+                        <button
+                            className={`tab-button ${activeTab === 'swap' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('swap')}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: activeTab === 'swap' ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                                fontWeight: activeTab === 'swap' ? 600 : 400,
+                                cursor: 'pointer',
+                                padding: '0 4px',
+                                fontSize: '16px'
+                            }}
+                        >
+                            Swap
+                        </button>
+                        <button
+                            className={`tab-button ${activeTab === 'limit' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('limit')}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: activeTab === 'limit' ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                                fontWeight: activeTab === 'limit' ? 600 : 400,
+                                cursor: 'pointer',
+                                padding: '0 4px',
+                                fontSize: '16px'
+                            }}
+                        >
+                            Limit
+                        </button>
                     </div>
 
-                    <div className="input-container">
-                        <div className="input-row">
-                            <input
-                                type="text"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0"
-                                className="amount-input"
-                            />
-                            <button
-                                className="token-select"
-                                onClick={() => openModal('sell')}
-                            >
-                                {sellToken ? (
-                                    <>
-                                        <span className="token-icon-small">
-                                            {sellToken.logoURI ? <img src={sellToken.logoURI} alt={sellToken.symbol} /> : '🪙'}
-                                        </span>
-                                        {sellToken.symbol}
-                                    </>
-                                ) : (
-                                    'Select Token'
-                                )}
-                                <span className="dropdown-arrow">▼</span>
-                            </button>
-                        </div>
-                        <div className="balance-row">
-                            <span>Balance: {parseFloat(sellBalance).toFixed(4)}</span>
-                        </div>
-                    </div>
-
-                    <div className="arrow-container">
-                        {refreshing ? (
-                            <div className="refresh-spinner">
-                                <img src="/alphaswap_logo_v2.svg" alt="Refreshing..." />
+                    {activeTab === 'limit' ? (
+                        <LimitOrder
+                            cowSdk={cowSdk}
+                            selectedChainId={selectedChainId}
+                            onNetworkChange={onNetworkChange}
+                        />
+                    ) : (
+                        <>
+                            <div className="order-form-header">
+                                <h3 style={{ margin: 0, fontWeight: 500 }}>Swap</h3>
+                                <div className="settings-icon" style={{ cursor: 'pointer', opacity: 0.7 }}>⚙️</div>
                             </div>
-                        ) : (
-                            <div className="arrow-icon">↓</div>
-                        )}
-                    </div>
 
-                    <div className="input-container">
-                        <div className="input-row">
-                            <input
-                                type="text"
-                                value={(() => {
+
+                            <div className="input-container">
+                                <div className="input-row">
+                                    <input
+                                        type="text"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0"
+                                        className="amount-input"
+                                    />
+                                    <button
+                                        className="token-select"
+                                        onClick={() => openModal('sell')}
+                                    >
+                                        {sellToken ? (
+                                            <>
+                                                <span className="token-icon-small">
+                                                    {sellToken.logoURI ? <img src={sellToken.logoURI} alt={sellToken.symbol} /> : '🪙'}
+                                                </span>
+                                                {sellToken.symbol}
+                                            </>
+                                        ) : (
+                                            'Select Token'
+                                        )}
+                                        <span className="dropdown-arrow">▼</span>
+                                    </button>
+                                </div>
+                                <div className="balance-row">
+                                    <span>Balance: {parseFloat(sellBalance).toFixed(4)}</span>
+                                </div>
+                            </div>
+
+                            <div className="arrow-container">
+                                {refreshing ? (
+                                    <div className="refresh-spinner">
+                                        <img src="/alphaswap_logo_v2.svg" alt="Refreshing..." />
+                                    </div>
+                                ) : (
+                                    <div className="arrow-icon">↓</div>
+                                )}
+                            </div>
+
+                            <div className="input-container">
+                                <div className="input-row">
+                                    <input
+                                        type="text"
+                                        value={(() => {
+                                            const wrapScenario = getWrapScenario();
+                                            if (wrapScenario && debouncedAmount && parseFloat(debouncedAmount) > 0) {
+                                                // For wrap/unwrap, show 1:1 conversion
+                                                return debouncedAmount;
+                                            }
+                                            if (quote && buyToken) {
+                                                return parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)).toFixed(6).replace(/\.?0+$/, '');
+                                            }
+                                            return '';
+                                        })()}
+                                        readOnly
+                                        placeholder="0.0"
+                                        className="amount-input"
+                                    />
+                                    <button
+                                        className="token-select"
+                                        onClick={() => openModal('buy')}
+                                    >
+                                        {buyToken ? (
+                                            <>
+                                                <span className="token-icon-small">
+                                                    {buyToken.logoURI ? <img src={buyToken.logoURI} alt={buyToken.symbol} /> : '🪙'}
+                                                </span>
+                                                {buyToken.symbol}
+                                            </>
+                                        ) : (
+                                            'Select Token'
+                                        )}
+                                        <span className="dropdown-arrow">▼</span>
+                                    </button>
+                                </div>
+                                <div className="balance-row">
+                                    <span>Balance: {parseFloat(buyBalance).toFixed(4)}</span>
+                                </div>
+                            </div>
+
+                            {quote && sellToken && buyToken && (
+                                <div className="quote-details-section">
+                                    <div className="detail-row main-receive-row">
+                                        <span className="detail-label">Receive (incl. fees) ⓘ</span>
+                                        <span className="detail-value">
+                                            {parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)).toFixed(4)} {buyToken.symbol}
+                                        </span>
+                                    </div>
+
+                                    <div className="detail-row exchange-rate-row">
+                                        <span className="detail-label">1 {sellToken.symbol} = {
+                                            (parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)) /
+                                                parseFloat(ethers.formatUnits(quote.quote.sellAmount, sellToken.decimals))).toFixed(4)
+                                        } {buyToken.symbol}</span>
+                                    </div>
+
+                                    <div className="fee-details-group">
+                                        <div className="detail-row fee-row">
+                                            <div className="fee-label-container">
+                                                <div className="fee-bullet"></div>
+                                                <span className="detail-label">Protocol fee (0.02%) ⓘ</span>
+                                            </div>
+                                            <span className="detail-value">
+                                                {(parseFloat(ethers.formatUnits(quote.quote.sellAmount, sellToken.decimals)) * 0.0002).toFixed(8)} {sellToken.symbol}
+                                            </span>
+                                        </div>
+
+                                        <div className="detail-row fee-row">
+                                            <div className="fee-label-container">
+                                                <div className="fee-bullet"></div>
+                                                <span className="detail-label">Network costs (est.) ⓘ</span>
+                                            </div>
+                                            <span className="detail-value">
+                                                {parseFloat(ethers.formatUnits(quote.quote.feeAmount, sellToken.decimals)).toFixed(8)} {sellToken.symbol}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="detail-row slippage-row">
+                                        <span className="detail-label">Slippage tolerance (dynamic) ⓘ</span>
+                                        <span className="detail-value">
+                                            {(() => {
+                                                const slippage = cowSdk?.chainId === 11155111 ? 1.00 : 0.50;
+                                                return `${slippage.toFixed(2)}%`;
+                                            })()}
+                                        </span>
+                                    </div>
+
+                                    <div className="detail-row detail-highlight">
+                                        <span className="detail-label">= Minimum receive</span>
+                                        <span className="detail-value">
+                                            {(() => {
+                                                const slippage = cowSdk?.chainId === 11155111 ? 0.01 : 0.005;
+                                                return (parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)) * (1 - slippage)).toFixed(8);
+                                            })()} {buyToken.symbol}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {error && <div className="error-banner">{error}</div>}
+
+                            <div className="actions">
+                                {(() => {
                                     const wrapScenario = getWrapScenario();
-                                    if (wrapScenario && debouncedAmount && parseFloat(debouncedAmount) > 0) {
-                                        // For wrap/unwrap, show 1:1 conversion
-                                        return debouncedAmount;
+
+                                    if (wrapScenario) {
+                                        // Wrap/Unwrap button
+                                        return (
+                                            <button
+                                                onClick={handleWrap}
+                                                disabled={loading || !sdk || !debouncedAmount || parseFloat(debouncedAmount) === 0}
+                                                className="btn-primary"
+                                            >
+                                                {loading ? `${wrapScenario === 'wrap' ? 'Wrapping' : 'Unwrapping'}...` : (wrapScenario === 'wrap' ? 'Wrap' : 'Unwrap')}
+                                            </button>
+                                        );
                                     }
-                                    if (quote && buyToken) {
-                                        return parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)).toFixed(6).replace(/\.?0+$/, '');
-                                    }
-                                    return '';
+
+                                    // Normal swap flow
+                                    return (
+                                        <>
+                                            {quote && sellToken && !isApproved && (
+                                                <ApprovalButton
+                                                    provider={cowSdk.provider}
+                                                    signer={cowSdk.signer}
+                                                    userAddress={cowSdk.account}
+                                                    tokenAddress={sellToken.address}
+                                                    amount={ethers.parseUnits(debouncedAmount, sellToken.decimals).toString()}
+                                                    onApprovalComplete={handleApprovalComplete}
+                                                    tokenSymbol={sellToken.symbol}
+                                                />
+                                            )}
+
+                                            <button
+                                                onClick={handlePlaceOrder}
+                                                disabled={loading || !quote || !sdk || !isApproved || !!(orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus))}
+                                                className="btn-primary"
+                                                title={!isApproved ? "Please approve token first" : (orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)) ? "Order in progress..." : ""}
+                                            >
+                                                {orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)
+                                                    ? 'Order Processing...'
+                                                    : loading ? (quote ? 'Swapping...' : 'Fetching Quote...') : (quote ? 'Swap' : 'Enter Amount')}
+                                            </button>
+                                        </>
+                                    );
                                 })()}
-                                readOnly
-                                placeholder="0.0"
-                                className="amount-input"
-                            />
-                            <button
-                                className="token-select"
-                                onClick={() => openModal('buy')}
-                            >
-                                {buyToken ? (
-                                    <>
-                                        <span className="token-icon-small">
-                                            {buyToken.logoURI ? <img src={buyToken.logoURI} alt={buyToken.symbol} /> : '🪙'}
-                                        </span>
-                                        {buyToken.symbol}
-                                    </>
-                                ) : (
-                                    'Select Token'
-                                )}
-                                <span className="dropdown-arrow">▼</span>
-                            </button>
-                        </div>
-                        <div className="balance-row">
-                            <span>Balance: {parseFloat(buyBalance).toFixed(4)}</span>
-                        </div>
-                    </div>
-
-                    {quote && sellToken && buyToken && (
-                        <div className="quote-details-section">
-                            <div className="detail-row main-receive-row">
-                                <span className="detail-label">Receive (incl. fees) ⓘ</span>
-                                <span className="detail-value">
-                                    {parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)).toFixed(4)} {buyToken.symbol}
-                                </span>
                             </div>
 
-                            <div className="detail-row exchange-rate-row">
-                                <span className="detail-label">1 {sellToken.symbol} = {
-                                    (parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)) /
-                                        parseFloat(ethers.formatUnits(quote.quote.sellAmount, sellToken.decimals))).toFixed(4)
-                                } {buyToken.symbol}</span>
-                            </div>
-
-                            <div className="fee-details-group">
-                                <div className="detail-row fee-row">
-                                    <div className="fee-label-container">
-                                        <div className="fee-bullet"></div>
-                                        <span className="detail-label">Protocol fee (0.02%) ⓘ</span>
-                                    </div>
-                                    <span className="detail-value">
-                                        {(parseFloat(ethers.formatUnits(quote.quote.sellAmount, sellToken.decimals)) * 0.0002).toFixed(8)} {sellToken.symbol}
-                                    </span>
-                                </div>
-
-                                <div className="detail-row fee-row">
-                                    <div className="fee-label-container">
-                                        <div className="fee-bullet"></div>
-                                        <span className="detail-label">Network costs (est.) ⓘ</span>
-                                    </div>
-                                    <span className="detail-value">
-                                        {parseFloat(ethers.formatUnits(quote.quote.feeAmount, sellToken.decimals)).toFixed(8)} {sellToken.symbol}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="detail-row slippage-row">
-                                <span className="detail-label">Slippage tolerance (dynamic) ⓘ</span>
-                                <span className="detail-value">
-                                    {(() => {
-                                        const slippage = cowSdk?.chainId === 11155111 ? 1.00 : 0.50;
-                                        return `${slippage.toFixed(2)}%`;
-                                    })()}
-                                </span>
-                            </div>
-
-                            <div className="detail-row detail-highlight">
-                                <span className="detail-label">= Minimum receive</span>
-                                <span className="detail-value">
-                                    {(() => {
-                                        const slippage = cowSdk?.chainId === 11155111 ? 0.01 : 0.005;
-                                        return (parseFloat(ethers.formatUnits(quote.quote.buyAmount, buyToken.decimals)) * (1 - slippage)).toFixed(8);
-                                    })()} {buyToken.symbol}
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    {error && <div className="error-banner">{error}</div>}
-
-                    <div className="actions">
-                        {(() => {
-                            const wrapScenario = getWrapScenario();
-
-                            if (wrapScenario) {
-                                // Wrap/Unwrap button
-                                return (
-                                    <button
-                                        onClick={handleWrap}
-                                        disabled={loading || !sdk || !debouncedAmount || parseFloat(debouncedAmount) === 0}
-                                        className="btn-primary"
+                            {wrapTxHash && (
+                                <div className="success-message">
+                                    Transaction Successful! <br />
+                                    <a
+                                        href={`https://etherscan.io/tx/${wrapTxHash}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: 'inherit', fontSize: '12px', textDecoration: 'underline' }}
                                     >
-                                        {loading ? `${wrapScenario === 'wrap' ? 'Wrapping' : 'Unwrapping'}...` : (wrapScenario === 'wrap' ? 'Wrap' : 'Unwrap')}
-                                    </button>
-                                );
-                            }
+                                        View on Etherscan
+                                    </a>
+                                </div>
+                            )}
 
-                            // Normal swap flow
-                            return (
-                                <>
-                                    {quote && sellToken && !isApproved && (
-                                        <ApprovalButton
-                                            provider={cowSdk.provider}
-                                            signer={cowSdk.signer}
-                                            userAddress={cowSdk.account}
-                                            tokenAddress={sellToken.address}
-                                            amount={ethers.parseUnits(debouncedAmount, sellToken.decimals).toString()}
-                                            onApprovalComplete={handleApprovalComplete}
-                                            tokenSymbol={sellToken.symbol}
-                                        />
-                                    )}
-
-                                    <button
-                                        onClick={handlePlaceOrder}
-                                        disabled={loading || !quote || !sdk || !isApproved || !!(orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus))}
-                                        className="btn-primary"
-                                        title={!isApproved ? "Please approve token first" : (orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)) ? "Order in progress..." : ""}
+                            {orderId && (
+                                <div className="success-message">
+                                    <div style={{ marginBottom: '8px' }}>
+                                        {orderStatus === 'fulfilled' ? '✅ Order Filled!' :
+                                            orderStatus === 'cancelled' ? '❌ Order Cancelled' :
+                                                orderStatus === 'expired' ? '⚠️ Order Expired' :
+                                                    '⏳ Processing Order...'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '4px' }}>
+                                        Status: <span style={{ textTransform: 'capitalize' }}>{orderStatus || 'Pending'}</span>
+                                    </div>
+                                    <a
+                                        href={`${import.meta.env.VITE_COW_EXPLORER_URL || 'https://explorer.cow.fi/sepolia/orders/'}${orderId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: 'inherit', fontSize: '12px', textDecoration: 'underline' }}
                                     >
-                                        {orderId && orderStatus && !['fulfilled', 'cancelled', 'expired'].includes(orderStatus)
-                                            ? 'Order Processing...'
-                                            : loading ? (quote ? 'Swapping...' : 'Fetching Quote...') : (quote ? 'Swap' : 'Enter Amount')}
-                                    </button>
-                                </>
-                            );
-                        })()}
-                    </div>
-
-                    {wrapTxHash && (
-                        <div className="success-message">
-                            Transaction Successful! <br />
-                            <a
-                                href={`https://etherscan.io/tx/${wrapTxHash}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: 'inherit', fontSize: '12px', textDecoration: 'underline' }}
-                            >
-                                View on Etherscan
-                            </a>
-                        </div>
-                    )}
-
-                    {orderId && (
-                        <div className="success-message">
-                            <div style={{ marginBottom: '8px' }}>
-                                {orderStatus === 'fulfilled' ? '✅ Order Filled!' :
-                                    orderStatus === 'cancelled' ? '❌ Order Cancelled' :
-                                        orderStatus === 'expired' ? '⚠️ Order Expired' :
-                                            '⏳ Processing Order...'}
-                            </div>
-                            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '4px' }}>
-                                Status: <span style={{ textTransform: 'capitalize' }}>{orderStatus || 'Pending'}</span>
-                            </div>
-                            <a
-                                href={`${import.meta.env.VITE_COW_EXPLORER_URL || 'https://explorer.cow.fi/sepolia/orders/'}${orderId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: 'inherit', fontSize: '12px', textDecoration: 'underline' }}
-                            >
-                                View on CoW Explorer
-                            </a>
-                        </div>
+                                        View on CoW Explorer
+                                    </a>
+                                </div>
+                            )}
+                        </>
                     )}
                 </>
             )}

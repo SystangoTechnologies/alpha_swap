@@ -15,6 +15,14 @@ export interface CowHook {
     disconnect: () => void;
     getQuote: (sellToken: string, buyToken: string, amount: string, kind: 'sell' | 'buy', sellTokenDecimals: number, buyTokenDecimals: number, chainIdOverride?: number) => Promise<any>;
     placeOrder: (quote: any) => Promise<string>;
+    createLimitOrder: (params: {
+        sellToken: string;
+        buyToken: string;
+        sellAmount: string;
+        buyAmount: string;
+        validFor: number;
+        partiallyFillable: boolean;
+    }) => Promise<string>;
 }
 
 export const useCowSdk = (): CowHook => {
@@ -214,6 +222,81 @@ export const useCowSdk = (): CowHook => {
         return orderId.orderId;
     }, [sdk, signer, chainId, account]);
 
+    const createLimitOrder = useCallback(async (params: {
+        sellToken: string;
+        buyToken: string;
+        sellAmount: string;
+        buyAmount: string;
+        validFor: number;
+        partiallyFillable: boolean;
+    }) => {
+        if (!sdk || !signer || !chainId) throw new Error("SDK not initialized");
+
+        const { sellToken, buyToken, sellAmount, buyAmount, validFor, partiallyFillable } = params;
+        const validTo = Math.floor(Date.now() / 1000) + validFor;
+
+        // Construct order
+        const order = {
+            sellToken,
+            buyToken,
+            receiver: account,
+            sellAmount,
+            buyAmount,
+            validTo,
+            appData: '0x0000000000000000000000000000000000000000000000000000000000000000',
+            feeAmount: '0',
+            kind: 'sell',
+            partiallyFillable,
+            sellTokenBalance: 'erc20',
+            buyTokenBalance: 'erc20'
+        };
+
+        // We need the domain.
+        const domain = {
+            name: 'Gnosis Protocol',
+            version: 'v2',
+            chainId,
+            verifyingContract: '0x9008D19f58AAbD9eD0D60971565AA8510560ab41' // Mainnet/Sepolia/etc. need correct address
+        };
+
+        if (chainId === 11155111) {
+            domain.verifyingContract = '0x9008D19f58AAbD9eD0D60971565AA8510560ab41'; // Sepolia
+        } else {
+            domain.verifyingContract = '0x9008D19f58AAbD9eD0D60971565AA8510560ab41'; // Mainnet
+        }
+
+        const types = {
+            Order: [
+                { name: "sellToken", type: "address" },
+                { name: "buyToken", type: "address" },
+                { name: "receiver", type: "address" },
+                { name: "sellAmount", type: "uint256" },
+                { name: "buyAmount", type: "uint256" },
+                { name: "validTo", type: "uint32" },
+                { name: "appData", type: "bytes32" },
+                { name: "feeAmount", type: "uint256" },
+                { name: "kind", type: "string" },
+                { name: "partiallyFillable", type: "bool" },
+                { name: "sellTokenBalance", type: "string" },
+                { name: "buyTokenBalance", type: "string" },
+            ]
+        };
+
+        // Sign order
+        // @ts-ignore
+        const signature = await signer.signTypedData(domain, types, order);
+
+        // Submit to Backend
+        const orderId = await swapApi.submitOrder({
+            quote: order,
+            signature,
+            chainId,
+            from: account || ethers.ZeroAddress
+        });
+
+        return orderId.orderId;
+    }, [sdk, signer, chainId, account]);
+
     useEffect(() => {
         const ethereum = (window as any).ethereum;
         if (ethereum) {
@@ -242,6 +325,7 @@ export const useCowSdk = (): CowHook => {
         connect,
         disconnect,
         getQuote,
-        placeOrder
+        placeOrder,
+        createLimitOrder
     };
 };
